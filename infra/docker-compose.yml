@@ -1,0 +1,46 @@
+# Local stack: API on :5268 and the web app on :5173. The signing key here is for this machine only.
+name: cinevault
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+    container_name: cinevault-api
+    ports:
+      - "5268:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Catalog__ImportCsv: Data/movies.csv
+      EnableApiDocs: "true"
+      Jwt__Secret: "local-compose-signing-key-replace-before-deploying"
+      Bootstrap__AdminEmail: admin@cinevault.local
+      Bootstrap__AdminPassword: Admin@1234
+    volumes:
+      - api_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\r\n\r\n' >&3 && grep -q ' 200 ' <&3"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  web:
+    build:
+      context: ../web
+    container_name: cinevault-web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  api_data:
