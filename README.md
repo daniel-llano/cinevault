@@ -70,6 +70,7 @@ cd web && npm install && npm run dev          # http://localhost:5173, proxies /
 | `Catalog:ImportCsv` | CSV to load when the movies table is empty |
 | `Bootstrap:AdminEmail`, `Bootstrap:AdminPassword` | Creates the first admin if it doesn't exist |
 | `Cors:Origins` | Only needed when the web app is served from another origin |
+| `ForwardedHeaders:KnownProxies`, `ForwardedHeaders:KnownNetworks` | IPs and CIDR ranges of the reverse proxies allowed to set `X-Forwarded-For` and `-Proto`. Empty means loopback only. Compose sets it to the web container |
 | `EnableApiDocs` | Serves `/openapi/v1.json` and `/docs` outside Development |
 
 In production the web container proxies `/api` to the API, so both live on one origin.

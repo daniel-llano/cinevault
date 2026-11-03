@@ -16,6 +16,8 @@ services:
       Jwt__Secret: "local-compose-signing-key-replace-before-deploying"
       Bootstrap__AdminEmail: admin@cinevault.local
       Bootstrap__AdminPassword: Admin@1234
+      # Only the web container's nginx may set X-Forwarded-For.
+      ForwardedHeaders__KnownProxies__0: "172.31.73.10"
     volumes:
       - api_data:/data
     restart: unless-stopped
@@ -35,6 +37,9 @@ services:
         condition: service_healthy
     ports:
       - "5173:80"
+    networks:
+      default:
+        ipv4_address: 172.31.73.10
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
@@ -44,3 +49,10 @@ services:
 
 volumes:
   api_data:
+
+# Fixed subnet so the API can trust the web proxy by address.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.31.73.0/24

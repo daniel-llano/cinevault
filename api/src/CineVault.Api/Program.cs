@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using CineVault.Api.Data;
@@ -60,11 +61,15 @@ if (origins.Contains("*"))
     throw new InvalidOperationException("Cors:Origins can't be *. List the web app origins.");
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
 
+// X-Forwarded-* is applied only for requests from the proxies in ForwardedHeaders:KnownProxies/KnownNetworks.
+// With none listed only loopback is trusted, so a client can't spoof its IP (and dodge the per-IP rate limits) itself.
+var knownProxies = (config.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? []).Select(IPAddress.Parse).ToArray();
+var knownNetworks = (config.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? []).Select(System.Net.IPNetwork.Parse).ToArray();
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
     o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    o.KnownIPNetworks.Clear();
-    o.KnownProxies.Clear();
+    foreach (var proxy in knownProxies) o.KnownProxies.Add(proxy);
+    foreach (var network in knownNetworks) o.KnownIPNetworks.Add(network);
 });
 
 var app = builder.Build();
